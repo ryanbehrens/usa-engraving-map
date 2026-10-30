@@ -69,6 +69,15 @@ const hwy = { type: 'FeatureCollection', features: roads.features.filter(f => f.
 layers.freeways = `<path d="${gp(fwy)}" fill="none" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round"/>`;
 layers.highways = `<path d="${gp(hwy)}" fill="none" stroke-width="0.35" stroke-linecap="round" stroke-linejoin="round"/>`;
 
+// ---- water
+const readGJ = (f) => JSON.parse(fs.readFileSync(path.join(dataDir, f)));
+const rewind = (fc) => { for (const f of fc.features) if (d3.geoArea(f) > 2 * Math.PI) { const g = f.geometry; (g.type === 'Polygon' ? [g.coordinates] : g.coordinates).forEach(p => p.forEach(r => r.reverse())); } return fc; };
+const lakes = rewind(readGJ('build_lakes.geojson'));
+lakes.features = lakes.features.filter(f => gp.area(f) > 0.4);
+layers.lakes = `<path d="${gp(lakes)}" stroke-width="0.3" stroke-linejoin="round"/>`;
+layers.riversMajor = `<path d="${gp(readGJ('build_rivers_major.geojson'))}" fill="none" stroke-width="0.6" stroke-linecap="round" stroke-linejoin="round"/>`;
+layers.riversMinor = `<path d="${gp(readGJ('build_rivers_minor.geojson'))}" fill="none" stroke-width="0.3" stroke-linecap="round" stroke-linejoin="round"/>`;
+
 // ---- parks (Natural Earth polygons) + markers for National Parks missing from that dataset
 const parks = JSON.parse(fs.readFileSync(path.join(dataDir, 'build_parks.geojson')));
 parks.features = parks.features.filter(f => /NP/.test(f.properties.unit_name));

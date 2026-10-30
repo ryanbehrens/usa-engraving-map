@@ -76,7 +76,7 @@
         <button data-v="black" class="on">All black</button><button data-v="layers">Color per layer</button>
       </div>
       <div class="seg" id="parkfill">
-        <button data-v="fill" class="on">Park areas filled</button><button data-v="outline">Outlined</button>
+        <button data-v="fill" class="on">Parks &amp; lakes filled</button><button data-v="outline">Outlined</button>
       </div>
     </div>
     <div>
@@ -105,7 +105,10 @@ const LAYERS = [
   { id:'states',         group:'Base',  label:'State borders',          color:'#555555', on:true },
   { id:'freeways',       group:'Roads', label:'Freeways & interstates', color:'#d62728', on:true },
   { id:'highways',       group:'Roads', label:'Highways (US & state)',  color:'#ff7f0e', on:false },
-  { id:'parks',          group:'Parks', label:'National park areas',    color:'#2ca02c', on:true },
+  { id:'lakes',          group:'Water', label:'Lakes',                  color:'#1f77b4', on:false, area:true },
+  { id:'riversMajor',    group:'Water', label:'Major rivers',           color:'#17becf', on:false },
+  { id:'riversMinor',    group:'Water', label:'Smaller rivers',         color:'#6baed6', on:false },
+  { id:'parks',          group:'Parks', label:'National park areas',    color:'#2ca02c', on:true, area:true },
   { id:'parkIcons',      group:'Icons', label:'Park icons (trees)',     color:'#0b8f6a', on:true,  icons:'parks' },
   { id:'landmarkIcons',  group:'Icons', label:'Landmark icons (stars)', color:'#1f4fd6', on:true,  icons:'landmarks' },
   { id:'stateNames',     group:'Text',  label:'State abbreviations',    color:'#8a5a00', on:false },
@@ -214,7 +217,7 @@ function buildSVG(forExport) {
     if (!state.on[l.id]) continue;
     const c = state.color === 'black' ? '#000000' : l.color;
     let fill = c;
-    if (l.id === 'parks' && state.parkfill === 'outline') fill = 'none';
+    if (l.area && state.parkfill === 'outline') fill = 'none';
     g += `<g id="${l.id}" inkscape:groupmode="layer" inkscape:label="${l.label.replace(/&/g, '&amp;')}" fill="${fill}" stroke="${c}">${layerBody(l)}</g>`;
   }
   const size = forExport ? `width="${ws}" height="${hs}" ` : '';

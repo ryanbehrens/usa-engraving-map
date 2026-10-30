@@ -9,7 +9,7 @@ Toggle layers, set the output size and icon size, then download.
 - `source/`: what builds `index.html`.
   - `template.html`: the page UI (layout, controls, download logic). Edit this for UI changes.
   - `build.mjs`: projects the map data and converts all text to outlines. Edit this for landmarks, label positions and park markers.
-  - `build_roads.geojson`, `build_parks.geojson`: simplified Natural Earth data.
+  - `build_*.geojson`: simplified Natural Earth data (roads, parks, rivers, lakes).
 
 ## Rebuild after changes
 
@@ -21,7 +21,7 @@ npm run build    # regenerates ../index.html
 
 ## Layers
 
-Base (frame, US outline, state borders), roads (freeways, highways), park areas,
+Base (frame, US outline, state borders), roads (freeways, highways), water (lakes, major rivers, smaller rivers), park areas,
 **icons** (park trees, landmark stars) and **text** (state abbreviations, park names, landmark names, title), plus a compass.
 Each layer is its own Inkscape/LightBurn layer in the exported SVG.
 
@@ -30,5 +30,5 @@ sheet of shapes to cut out as pegs for a travel map.
 
 ## Data
 
-US state boundaries: US Census via [us-atlas](https://github.com/topojson/us-atlas). Roads and parks: [Natural Earth](https://www.naturalearthdata.com/). Both are public domain.
+US state boundaries: US Census via [us-atlas](https://github.com/topojson/us-atlas). Roads, parks, rivers and lakes: [Natural Earth](https://www.naturalearthdata.com/). Both are public domain.
 Font: Barlow Condensed (SIL Open Font License), embedded as outlines.
