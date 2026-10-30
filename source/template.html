@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>USA Laser Engraving Map</title>
+<meta name="description" content="Build a laser-ready SVG map of the USA. Toggle highways, national parks, landmarks and labels, then download.">
+<style>
+  :root { --bg:#f4f1ea; --panel:#fffdf8; --ink:#1d1b18; --muted:#6d675e; --line:#e2ddd2; --accent:#b4501f; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; background:var(--bg); color:var(--ink); }
+  .app { display:grid; grid-template-columns: 310px 1fr; min-height:100vh; }
+  aside { background:var(--panel); border-right:1px solid var(--line); padding:22px 20px; display:flex; flex-direction:column; gap:18px; overflow-y:auto; max-height:100vh; position:sticky; top:0; }
+  h1 { font-size:19px; margin:0; letter-spacing:.2px; }
+  .sub { color:var(--muted); font-size:13px; margin-top:4px; line-height:1.4; }
+  h2 { font-size:11px; text-transform:uppercase; letter-spacing:1.2px; color:var(--muted); margin:0 0 8px; font-weight:600; }
+  .grp { display:flex; align-items:center; justify-content:space-between; font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--muted); margin:10px 8px 2px; font-weight:600; }
+  .grp button { font-size:11px; border:1px solid var(--line); background:#fff; border-radius:5px; padding:2px 8px; cursor:pointer; text-transform:none; letter-spacing:0; color:var(--ink); }
+  .layer { display:flex; align-items:center; gap:10px; padding:6px 8px; border-radius:7px; cursor:pointer; font-size:14px; user-select:none; }
+  .layer:hover { background:#f3efe6; }
+  .layer input { accent-color: var(--accent); width:16px; height:16px; margin:0; }
+  .sw { width:12px; height:12px; border-radius:3px; margin-left:auto; border:1px solid rgba(0,0,0,.15); }
+  .row { display:flex; gap:8px; align-items:center; font-size:14px; }
+  .row input[type=number] { width:80px; padding:6px 8px; border:1px solid var(--line); border-radius:6px; font-size:14px; background:#fff; }
+  .row input[type=range] { flex:1; accent-color: var(--accent); }
+  select { padding:6px 8px; border:1px solid var(--line); border-radius:6px; font-size:14px; background:#fff; }
+  .seg { display:flex; border:1px solid var(--line); border-radius:7px; overflow:hidden; }
+  .seg button { flex:1; border:0; background:#fff; padding:7px 6px; font-size:13px; cursor:pointer; color:var(--ink); }
+  .seg button.on { background:var(--ink); color:#fff; }
+  .dl { width:100%; background:var(--accent); color:#fff; border:0; border-radius:8px; padding:12px; font-size:15px; font-weight:600; cursor:pointer; }
+  .dl.alt { background:#fff; color:var(--ink); border:1px solid var(--line); margin-top:8px; font-size:14px; padding:10px; }
+  .dl:hover { filter:brightness(1.06); }
+  .quick { display:flex; gap:6px; }
+  .quick button { flex:1; border:1px solid var(--line); background:#fff; border-radius:6px; padding:5px; font-size:12px; cursor:pointer; }
+  .note { font-size:12px; color:var(--muted); line-height:1.45; }
+  main { padding:24px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; }
+  .board { background:#fff; box-shadow: 0 1px 2px rgba(0,0,0,.06), 0 8px 30px rgba(0,0,0,.08); border-radius:4px; width:100%; max-width:1400px; }
+  .board.wood { background: linear-gradient(90deg, #e9c99b, #e2bd8a 30%, #ebcda2 55%, #ddb680 80%, #e7c595); }
+  .board svg { display:block; width:100%; height:auto; }
+  .meta { font-size:12px; color:var(--muted); }
+  @media (max-width: 800px) { .app { grid-template-columns: 1fr; } aside { border-right:0; border-bottom:1px solid var(--line); max-height:none; position:static; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div>
+      <h1>USA Engraving Map</h1>
+      <div class="sub">Turn layers on or off, then download an SVG with only what you see.</div>
+    </div>
+    <div>
+      <h2>Layers</h2>
+      <div id="layers"></div>
+      <div class="quick" style="margin-top:8px">
+        <button id="all">All on</button><button id="min">Outline only</button><button id="reset">Default</button>
+      </div>
+    </div>
+    <div>
+      <h2>Icons</h2>
+      <div class="row" style="margin-bottom:8px">
+        Size <input id="isize" type="range" min="2" max="25" step="0.5" value="4"><span id="isizev" style="width:52px;text-align:right">4 mm</span>
+      </div>
+      <div class="seg" id="iconmode">
+        <button data-v="engrave" class="on">Engrave (filled)</button><button data-v="cut">Cut holes (outline)</button>
+      </div>
+      <div class="note" style="margin-top:6px">Size is the icon's height on the finished piece. Labels move outward as icons grow.</div>
+    </div>
+    <div>
+      <h2>Output</h2>
+      <div class="row" style="margin-bottom:8px">
+        Width <input id="w" type="number" min="2" max="200" step="0.5" value="24">
+        <select id="unit"><option value="in">in</option><option value="mm">mm</option><option value="cm">cm</option></select>
+      </div>
+      <div class="meta" id="hdim" style="margin-bottom:10px"></div>
+      <div class="seg" id="color" style="margin-bottom:8px">
+        <button data-v="black" class="on">All black</button><button data-v="layers">Color per layer</button>
+      </div>
+      <div class="seg" id="parkfill">
+        <button data-v="fill" class="on">Park areas filled</button><button data-v="outline">Outlined</button>
+      </div>
+    </div>
+    <div>
+      <button class="dl" id="download">Download map SVG</button>
+      <button class="dl alt" id="pieces">Download insert pieces SVG</button>
+      <div class="note" id="dlmsg" style="margin-top:6px"></div>
+    </div>
+    <div class="note">
+      Every layer is its own group (Inkscape &amp; LightBurn layers) and all text is converted to outlines, so no fonts are needed.
+      <b>Color per layer</b> lets you set a different speed/power for each layer in LightBurn.
+      The insert-pieces sheet has one matching shape per visible icon, ready to cut from a second board.
+    </div>
+    <div class="row" style="font-size:13px"><label><input type="checkbox" id="woodbg"> Preview on wood</label></div>
+  </aside>
+  <main>
+    <div class="board" id="board"></div>
+    <div class="meta">Data: US Census (via us-atlas), Natural Earth roads &amp; parks. Public domain.</div>
+  </main>
+</div>
+<script>
+const DATA = __DATA__;
+// kind: 'static' uses pre-built path data; 'icons' / 'labels' are generated live
+const LAYERS = [
+  { id:'frame',          group:'Base',  label:'Border frame',           color:'#7a7a7a', on:false },
+  { id:'outline',        group:'Base',  label:'US outline',             color:'#000000', on:true },
+  { id:'states',         group:'Base',  label:'State borders',          color:'#555555', on:true },
+  { id:'freeways',       group:'Roads', label:'Freeways & interstates', color:'#d62728', on:true },
+  { id:'highways',       group:'Roads', label:'Highways (US & state)',  color:'#ff7f0e', on:false },
+  { id:'parks',          group:'Parks', label:'National park areas',    color:'#2ca02c', on:true },
+  { id:'parkIcons',      group:'Icons', label:'Park icons (trees)',     color:'#0b8f6a', on:true,  icons:'parks' },
+  { id:'landmarkIcons',  group:'Icons', label:'Landmark icons (stars)', color:'#1f4fd6', on:true,  icons:'landmarks' },
+  { id:'stateNames',     group:'Text',  label:'State abbreviations',    color:'#8a5a00', on:false },
+  { id:'parkLabels',     group:'Text',  label:'Park names',             color:'#1b7a1b', on:false, labels:'parks' },
+  { id:'landmarkLabels', group:'Text',  label:'Landmark names',         color:'#7b2cbf', on:true,  labels:'landmarks' },
+  { id:'titleText',      group:'Text',  label:'Title',                  color:'#000000', on:false },
+  { id:'compass',        group:'Extras',label:'Compass',                color:'#444444', on:false },
+];
+const state = { on: Object.fromEntries(LAYERS.map(l => [l.id, l.on])), color:'black', parkfill:'fill', iconmode:'engrave', isize:4 };
+const defaults = { ...state.on };
+
+// ---- icon shapes, unit size (height 2, centred on 0,0)
+const SHAPES = {
+  star: (() => { let p = []; for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 0.42 : 1; p.push([r * Math.cos(a), r * Math.sin(a) + 0.08]); } return p; })(),
+  tree: [[0,-1],[0.5,-0.25],[0.25,-0.25],[0.72,0.45],[0.16,0.45],[0.16,1],[-0.16,1],[-0.16,0.45],[-0.72,0.45],[-0.25,-0.25],[-0.5,-0.25]],
+  ufo: (() => { // saucer + dome as one outline
+    const p = [];
+    for (let i = 0; i <= 18; i++) { const a = Math.PI * i / 18; p.push([Math.cos(a) * -1, 0.25 + Math.sin(a) * 0.32]); } // lower hull, left->right
+    p.push([0.55, 0.0]);
+    for (let i = 0; i <= 12; i++) { const a = Math.PI * i / 12; p.push([0.42 * Math.cos(a), -0.02 - Math.sin(a) * 0.5]); } // dome right->left
+    p.push([-0.55, 0.0]);
+    return p;
+  })(),
+};
+const BASE_R = { parks: 2.6, landmarks: 3.2 }; // icon radius the labels were placed around
+function shapePath(type, x, y, r) {
+  return 'M' + SHAPES[type].map(([a, b]) => (x + a * r).toFixed(2) + ',' + (y + b * r).toFixed(2)).join('L') + 'Z';
+}
+
+// ---- UI
+const host = document.getElementById('layers');
+let lastGroup = '';
+for (const l of LAYERS) {
+  if (l.group !== lastGroup) {
+    lastGroup = l.group;
+    const h = document.createElement('div');
+    h.className = 'grp';
+    h.innerHTML = `<span>${l.group}</span>` + (LAYERS.filter(x => x.group === l.group).length > 1 ? `<button data-g="${l.group}">toggle</button>` : '');
+    host.appendChild(h);
+  }
+  const el = document.createElement('label');
+  el.className = 'layer';
+  el.innerHTML = `<input type="checkbox" data-id="${l.id}"><span>${l.label}</span><span class="sw" style="background:${l.color}"></span>`;
+  host.appendChild(el);
+}
+host.addEventListener('change', e => { if (e.target.dataset.id) { state.on[e.target.dataset.id] = e.target.checked; render(); } });
+host.addEventListener('click', e => {
+  const g = e.target.dataset && e.target.dataset.g; if (!g) return;
+  e.preventDefault();
+  const ls = LAYERS.filter(l => l.group === g), anyOn = ls.some(l => state.on[l.id]);
+  ls.forEach(l => state.on[l.id] = !anyOn); syncBoxes(); render();
+});
+function syncBoxes() { host.querySelectorAll('input').forEach(i => i.checked = state.on[i.dataset.id]); }
+document.getElementById('all').onclick = () => { LAYERS.forEach(l => state.on[l.id] = true); syncBoxes(); render(); };
+document.getElementById('min').onclick = () => { LAYERS.forEach(l => state.on[l.id] = l.id === 'outline'); syncBoxes(); render(); };
+document.getElementById('reset').onclick = () => { Object.assign(state.on, defaults); syncBoxes(); render(); };
+for (const id of ['color', 'parkfill', 'iconmode']) {
+  document.getElementById(id).addEventListener('click', e => {
+    if (!e.target.dataset.v) return;
+    state[id] = e.target.dataset.v;
+    e.currentTarget.querySelectorAll('button').forEach(b => b.classList.toggle('on', b === e.target));
+    render();
+  });
+}
+const isEl = document.getElementById('isize');
+isEl.oninput = () => { state.isize = parseFloat(isEl.value); document.getElementById('isizev').textContent = state.isize + ' mm'; render(); };
+const wEl = document.getElementById('w'), uEl = document.getElementById('unit');
+const MM = { in: 25.4, mm: 1, cm: 10 };
+function dims() {
+  const w = Math.max(0.1, parseFloat(wEl.value) || 24), u = uEl.value;
+  const h = w * DATA.H / DATA.W;
+  return { w, h, u, ws: +w.toFixed(3) + u, hs: +h.toFixed(3) + u, wmm: w * MM[u] };
+}
+uEl.onchange = () => {
+  const prev = uEl.dataset.prev || 'in';
+  wEl.value = +(parseFloat(wEl.value) * MM[prev] / MM[uEl.value]).toFixed(2);
+  uEl.dataset.prev = uEl.value; render();
+};
+wEl.oninput = render;
+document.getElementById('woodbg').onchange = e => document.getElementById('board').classList.toggle('wood', e.target.checked);
+
+// icon radius in map units for the chosen physical size
+function iconR() { return (state.isize / 2) * DATA.W / dims().wmm; }
+
+function layerBody(l) {
+  if (l.icons) {
+    const r = iconR();
+    const d = DATA.icons[l.icons].map(([x, y, t]) => shapePath(t, x, y, r)).join('');
+    return state.iconmode === 'cut'
+      ? `<path d="${d}" fill="none" stroke-width="0.25" stroke-linejoin="round"/>`
+      : `<path d="${d}" stroke="none"/>`;
+  }
+  if (l.labels) {
+    const extra = Math.max(0, iconR() - BASE_R[l.labels]) * 1.05;
+    return DATA.labels[l.labels].map(([d, dx, dy]) => {
+      const tx = (dx * extra).toFixed(2), ty = (dy * extra).toFixed(2);
+      return (+tx || +ty) ? `<path transform="translate(${tx},${ty})" d="${d}" stroke="none"/>` : `<path d="${d}" stroke="none"/>`;
+    }).join('');
+  }
+  return DATA.layers[l.id];
+}
+function buildSVG(forExport) {
+  const { ws, hs } = dims();
+  let g = '';
+  for (const l of LAYERS) {
+    if (!state.on[l.id]) continue;
+    const c = state.color === 'black' ? '#000000' : l.color;
+    let fill = c;
+    if (l.id === 'parks' && state.parkfill === 'outline') fill = 'none';
+    g += `<g id="${l.id}" inkscape:groupmode="layer" inkscape:label="${l.label.replace(/&/g, '&amp;')}" fill="${fill}" stroke="${c}">${layerBody(l)}</g>`;
+  }
+  const size = forExport ? `width="${ws}" height="${hs}" ` : '';
+  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" ${size}viewBox="0 0 ${DATA.W} ${DATA.H}">${g}</svg>`;
+}
+// sheet of matching insert pieces, drawn in millimetres
+function buildPiecesSVG() {
+  const sz = state.isize, gap = Math.max(3, sz * 0.4), pitch = sz + gap, r = sz / 2;
+  const items = [];
+  for (const l of LAYERS) if (l.icons && state.on[l.id]) for (const ic of DATA.icons[l.icons]) items.push(ic[2]);
+  if (!items.length) return null;
+  const cols = Math.min(items.length, Math.max(1, Math.floor(300 / pitch)));
+  const rows = Math.ceil(items.length / cols);
+  const W = cols * pitch + gap, H = rows * pitch + gap;
+  let d = '';
+  items.forEach((t, i) => {
+    const cx = gap + (i % cols) * pitch + r, cy = gap + Math.floor(i / cols) * pitch + r;
+    d += shapePath(t, cx, cy, r);
+  });
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" width="${W.toFixed(2)}mm" height="${H.toFixed(2)}mm" viewBox="0 0 ${W.toFixed(2)} ${H.toFixed(2)}"><g id="pieces" inkscape:groupmode="layer" inkscape:label="Insert pieces (cut)" fill="none" stroke="#ff0000" stroke-width="0.1"><path d="${d}"/></g></svg>`;
+}
+function render() {
+  const { w, h, u } = dims();
+  document.getElementById('hdim').textContent = `Output: ${+w.toFixed(2)} × ${+h.toFixed(2)} ${u}`;
+  document.getElementById('board').innerHTML = buildSVG(false);
+}
+
+// ---- downloads (works on any normal web host; uses Claude's download prompt when previewed inside Claude)
+let dlApi = null;
+try { if (window.claude && claude.use) claude.use('downloads').then(n => { dlApi = n; }).catch(() => {}); } catch (e) {}
+const msg = document.getElementById('dlmsg');
+async function save(filename, text) {
+  msg.textContent = '';
+  const blob = new Blob([text], { type: 'image/svg+xml' });
+  if (dlApi) {
+    try { await dlApi.save({ filename, data: blob }); msg.textContent = 'Saved ' + filename; }
+    catch (e) { if (!e || e.code !== 'declined') msg.textContent = 'Download unavailable here' + (e && e.message ? ': ' + e.message : ''); }
+    return;
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+document.getElementById('download').onclick = () => {
+  const on = LAYERS.filter(l => state.on[l.id]).length;
+  save(`usa-map-${on}-layers.svg`, '<?xml version="1.0" encoding="UTF-8"?>\n' + buildSVG(true));
+};
+document.getElementById('pieces').onclick = () => {
+  const s = buildPiecesSVG();
+  if (!s) { msg.textContent = 'Turn on an icon layer first.'; return; }
+  save(`usa-map-insert-pieces-${state.isize}mm.svg`, s);
+};
+syncBoxes(); render();
+</script>
+</body>
+</html>
